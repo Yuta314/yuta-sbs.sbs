@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Yuta SBS · Tokyo Runner</title>
+<style>
+:root{--p:#ff2e97;--c:#00e5ff;--bg:#0b0720;--y:#ffd23f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#fff;font-family:"Avenir Next Condensed","Arial Narrow",system-ui,sans-serif;overflow:hidden}
+canvas{display:block;position:fixed;inset:0}
+.ov{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(11,7,32,.8);z-index:5;overflow:auto;padding:12px}
+.ov.on{display:flex}
+.box{background:#150a2e;border:2px solid var(--p);box-shadow:0 0 28px rgba(255,46,151,.55);border-radius:6px;padding:20px;width:min(94vw,420px);max-height:94vh;overflow:auto}
+h1{margin:0 0 10px;font-size:34px;font-style:italic;letter-spacing:1px;color:var(--c);text-shadow:0 0 14px var(--c),3px 3px 0 var(--p);text-align:center}
+h2{margin:16px 0 6px;color:var(--p);font-size:18px}
+input,button{font:inherit;width:100%;padding:10px;margin:4px 0;border-radius:4px;border:1px solid var(--c);background:#0b0720;color:#fff}
+input:focus,button:focus-visible{outline:2px solid var(--y)}
+input[type=checkbox]{width:auto;margin-right:6px}
+button{background:var(--p);border:0;cursor:pointer;font-weight:800;letter-spacing:.5px}
+button:hover{filter:brightness(1.25)}
+button.b{background:var(--c);color:#06121a}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.it{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid #2b1f4d}
+.it button{width:auto;padding:6px 12px;margin:0}
+small{opacity:.7}
+#hud{position:fixed;top:calc(10px + env(safe-area-inset-top));left:0;right:0;display:none;justify-content:space-around;font-size:24px;font-weight:900;text-shadow:0 0 10px var(--c);z-index:3;pointer-events:none}
+#tbox{background:#000;padding:4px 14px 2px;border-radius:4px;box-shadow:0 0 12px rgba(0,0,0,.6);font-family:"Courier New",monospace;font-weight:900;color:#bbb}
+#ht{font-size:44px;background:linear-gradient(#fff,#888);-webkit-background-clip:text;background-clip:text;color:transparent;letter-spacing:-1px}
+#ht.low{background:none;color:#ff2e97}
+#strk{color:#ff2e97;font-size:16px}
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--p);padding:10px 18px;border-radius:4px;font-weight:800;z-index:9;display:none}
+#ae{color:var(--y);min-height:20px}
+#ann{position:fixed;top:0;left:0;right:0;background:#fff;color:#111;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;font-size:15px;font-weight:600;text-align:center;z-index:6;display:none;box-shadow:0 2px 10px rgba(0,0,0,.45)}
+#ann b{color:#d1005e}
+</style></head><body>
+<div id="hud"><div id="tbox"><span id="ht">60.00</span></div><span id="hs">0</span><span id="hc">🪙 0</span></div>
+<div id="toast"></div>
+<div id="ann"></div>
+
+<div class="ov on" id="auth"><div class="box">
+<h1>YUTA SBS</h1><small>Tokyo Runner · connecte-toi pour jouer</small>
+<input id="au" placeholder="Pseudo" maxlength="16" autocomplete="username">
+<input id="ap" type="password" placeholder="Mot de passe" autocomplete="current-password">
+<div id="ae"></div>
+<div class="row"><button class="b" onclick="auth(0)">Connexion</button><button onclick="auth(1)">Créer un compte</button></div>
+</div></div>
+
+<div class="ov" id="menu"><div class="box">
+<h1>TOKYO RUNNER</h1>
+<div id="mu"></div>
+<h2>Map</h2><select id="mp" style="width:100%;padding:10px;margin:4px 0;border-radius:4px;border:1px solid var(--c);background:#0b0720;color:#fff;font:inherit"><option value="tokyo">Tokyo de nuit</option><option value="miami">Miami</option><option value="dubai">Dubaï</option><option value="rio">Rio</option><option value="belgique">Belgique</option><option value="france">France</option><option value="italie">Italie</option><option value="allemagne">Allemagne</option><option value="espagne">Espagne</option><option value="angleterre">Angleterre</option></select>
+
+<h2>Mode</h2><select id="gm" onchange="menu()" style="width:100%;padding:10px;margin:4px 0;border-radius:4px;border:1px solid var(--c);background:#0b0720;color:#fff;font:inherit"><option value="normal">Normal</option><option value="lava">Floor is lava 🔥</option><option value="ranked">Classé 🏅</option></select>
+<div id="tinfo" style="margin:8px 0"></div>
+<button class="b" onclick="play()">JOUER</button>
+<div class="row"><button onclick="shop()">Boutique</button><button onclick="logout()">Déconnexion</button></div>
+<button id="ab" class="b" onclick="toggleAdm()" style="display:none;position:fixed;top:calc(12px + env(safe-area-inset-top));right:12px;width:auto;margin:0;padding:8px 12px;z-index:9">⚙ Panel admin (ou F4 / Fn+F4)</button>
+<div class="row"><button onclick="exportDB()">💾 Sauvegarder</button><button onclick="$('imp').click()">📂 Restaurer</button></div>
+<input id="imp" type="file" accept=".json,application/json" style="display:none" onchange="importDB(event)">
+<small>Z saut · S glisser · Q gauche · D droite (ou flèches / swipe)</small>
+<div id="lb"></div>
+</div></div>
+
+<div class="ov" id="shop"><div class="box"><h1>BOUTIQUE</h1><div id="sl"></div><button class="b" onclick="menu()">Retour</button></div></div>
+<div class="ov" id="end"><div class="box"><h1>GAME OVER</h1><p id="er" style="text-align:center;font-size:20px"></p><button class="b" onclick="play()">Rejouer</button><button onclick="menu()">Menu</button></div></div>
+<div class="ov" id="adm"><div class="box"></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),K='yutasbs_v1';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const key=s=>s.trim().toLowerCase(),okN=s=>/^[A-Za-z0-9_-]{2,16}$/.test(s.trim());
+const hash=s=>{let h=5381;for(const c of s)h=(h*33^c.charCodeAt(0))>>>0;return''+h};
+let DB;try{DB=JSON.parse(localStorage.getItem(K))}catch(e){}
+DB=DB||{u:{},admins:['yuta'],t:[],ct:null};
+/* Admins valables sur TOUS les appareils : ajoute les pseudos ici (en minuscules) */
+const FIXED_ADMINS=['yuta'];
+if(!Array.isArray(DB.admins))DB.admins=[];
+FIXED_ADMINS.forEach(a=>{if(!DB.admins.includes(a))DB.admins.push(a)});
+const save=()=>{try{localStorage.setItem(K,JSON.stringify(DB))}catch(e){}};
+const CAPES={og:{n:'OG Yuta',txt:'YUTA',c:'#ff2e97',p:0},red:{n:'Rouge Shibuya',txt:'SBS',c:'#e11d48',p:50},cy:{n:'Cyber Néon',txt:'TOKYO',c:'#00b8d4',p:100},gold:{n:'Or Samouraï',txt:'侍',c:'#f5b800',p:200}};
+let me=null;const isAdm=()=>me&&DB.admins.includes(me);
+let annT;
+function annSeen(){try{return localStorage.getItem('yutasbs_ann')===String(DB.msg&&DB.msg.t)}catch(e){return false}}
+function showAnn(){const a=$('ann'),m=DB.msg;const hud=h=>$('hud').style.top=h;
+ if(m&&m.m&&!annSeen()){
+  a.innerHTML='<b>📢 '+esc(m.a)+'</b> : '+esc(m.m);
+  if(a.style.display!='block'){a.style.display='block';hud('calc(56px + env(safe-area-inset-top))');
+   clearTimeout(annT);annT=setTimeout(()=>{a.style.display='none';hud('calc(10px + env(safe-area-inset-top))');try{localStorage.setItem('yutasbs_ann',String(m.t))}catch(e){}},5000)}
+ }else{a.style.display='none';hud('calc(10px + env(safe-area-inset-top))')}
+}
+function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.i);toast.i=setTimeout(()=>t.style.display='none',2200)}
+function show(id){document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on'));$(id).classList.add('on')}
+
+/* ---------- Son : clic de switch bleu ---------- */
+let AC;const au_=()=>AC||(AC=new(window.AudioContext||window.webkitAudioContext)());
+function tone(f,d,ty,v,t0,f2){try{const a=au_(),o=a.createOscillator(),g=a.createGain(),t=a.currentTime+(t0||0);o.type=ty;o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g).connect(a.destination);o.start(t);o.stop(t+d)}catch(e){}}
+const click=()=>{tone(3400,.02,'square',.1);tone(1800,.045,'triangle',.2,.028)};
+
+/* ---------- Comptes ---------- */
+const err=m=>$('ae').textContent=m;
+function auth(reg){
+ const n=$('au').value.trim(),p=$('ap').value;
+ if(!okN(n))return err('Pseudo : 2 à 16 lettres, chiffres, _ ou -');
+ if(p.length<4)return err('Mot de passe : 4 caractères minimum');
+ const k=key(n);
+ if(reg){if(DB.u[k])return err('Ce pseudo est déjà pris');DB.u[k]={n,pw:hash(p),coins:0,capes:['og'],cape:'og',best:0,timer:60,skins:[],skin:'classic'}}
+ else if(!DB.u[k]||DB.u[k].pw!=hash(p))return err('Pseudo ou mot de passe incorrect');
+ if(DB.u[k].ban)return err('Ce compte est banni');me=k;const u=DB.u[k];if(!u.capes.includes('og'))u.capes.push('og');if(!u.skins)u.skins=[];if(!u.skin)u.skin='classic';
+ save();err('');$('ap').value='';setCape();applySkin();menu();
+}
+function logout(){me=null;show('auth')}
+function exportDB(){const b=new Blob([JSON.stringify(DB)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='yuta-sbs-sauvegarde.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Sauvegarde téléchargée')}
+function importDB(ev){const f=ev.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!d||typeof d.u!=='object'||!Array.isArray(d.admins))throw 0;DB=d;save();me=null;show('auth');toast('Sauvegarde restaurée, reconnecte-toi')}catch(e){toast('Fichier de sauvegarde invalide')}};r.readAsText(f);ev.target.value=''}
+function upd(){if(!me)return;const u=DB.u[me];$('ab').style.display=isAdm()?'block':'none';$('mu').innerHTML=esc(u.n)+' · 🪙 '+u.coins+(isAdm()?' · <b style="color:#ffd23f">ADMIN (F4)</b>':'')}
+function tier(p){return p>=4000?'Légende':p>=2000?'Diamant':p>=1000?'Or':p>=500?'Argent':'Bronze'}
+function menu(){
+ st='menu';show('menu');upd();showAnn();const u=DB.u[me];
+ const t=DB.t.find(x=>x.id==DB.ct);
+ $('tinfo').innerHTML=t?'<label><input type="checkbox" id="tj" checked>Jouer le tournoi « '+esc(t.n)+' »</label>':'<small>Aucun tournoi en cours</small>';
+ const rk=$('gm')&&$('gm').value=='ranked';const src=rk?Object.fromEntries(Object.entries(DB.u).map(([k,v])=>[k,v.rbest||0])):t?t.s:Object.fromEntries(Object.entries(DB.u).map(([k,v])=>[k,v.best]));
+ const rows=Object.entries(src).sort((a,b)=>b[1]-a[1]).slice(0,10);
+ $('lb').innerHTML=(rk?'<p>Ton rang : <b>'+tier(u.rbest||0)+'</b> ('+(u.rbest||0)+' pts)</p>':'')+(DB.msg?'<div style="background:#2b1f4d;padding:8px;border-radius:4px;margin:8px 0">📢 <b>'+esc(DB.msg.a)+'</b> : '+esc(DB.msg.m)+'</div>':'')+'<h2>🏆 '+(rk?'Classement':t?esc(t.n):'Meilleurs scores')+'</h2>'+(rows.map((r,i)=>'<div class="it"><span>'+(i+1)+'. '+esc(DB.u[r[0]]?DB.u[r[0]].n:r[0])+'</span><b>'+r[1]+'</b></div>').join('')||'<small>Personne pour l\'instant. Sois le premier.</small>');
+}
+
+/* ---------- Boutique ---------- */
+function shop(){
+ show('shop');const u=DB.u[me];
+ $('sl').innerHTML='<p>🪙 '+u.coins+'</p>'+skinsHTML()+'<h2>Capes</h2>'+Object.entries(CAPES).map(([id,c])=>{const own=u.capes.includes(id);
+  return '<div class="it"><span style="color:'+c.c+';font-size:22px">■</span><span style="flex:1">'+c.n+' <small>« '+c.txt+' »</small></span>'+(own?'<button class="b" onclick="eq(\''+id+'\')">'+(u.cape==id?'Équipée ✓':'Équiper')+'</button>':'<button onclick="buy(\''+id+'\')">'+c.p+' 🪙</button>')+'</div>'}).join('');
+}
+const SKINS={
+ classic:{n:'Classique',p:0,body:0x00e5ff,leg:0xff2e97,head:0xffd9b0},
+ ninja:{n:'Ninja',p:0,body:0x1a1a1f,leg:0x2a2a33,head:0x111116},
+ nyxo:{n:'Nyxo',p:150,body:0x7c3aed,leg:0x1e1b4b,head:0xf5d0a9},
+ yuta:{n:'Yuta',p:200,body:0xff2e97,leg:0x00e5ff,head:0xffd9b0},
+ fluska:{n:'Fluska',p:250,body:0x22c55e,leg:0x14532d,head:0xf5d0a9}
+};
+function applySkin(){const s=SKINS[(me&&DB.u[me]&&DB.u[me].skin)||'classic']||SKINS.classic;body.material.color.setHex(s.body);head.material.color.setHex(s.head);legs.forEach(l=>l.material.color.setHex(s.leg))}
+function skinsHTML(){const u=DB.u[me];return '<h2>Skins</h2>'+Object.entries(SKINS).map(([id,s])=>{const own=s.p==0||(u.skins||[]).includes(id);return '<div class="it"><span style="color:#'+s.body.toString(16).padStart(6,'0')+';font-size:22px">■</span><span style="flex:1">'+s.n+(s.p?'':' <small>gratuit</small>')+'</span>'+(own?'<button class="b" onclick="equipS(\''+id+'\')">'+(u.skin==id?'Équipé ✓':'Équiper')+'</button>':'<button onclick="buyS(\''+id+'\')">'+s.p+' 🪙</button>')+'</div>'}).join('')}
+function buyS(id){const u=DB.u[me],s=SKINS[id];if(u.coins<s.p)return toast('Pas assez de pièces');u.coins-=s.p;u.skins=(u.skins||[]).concat(id);u.skin=id;save();applySkin();shop()}
+function equipS(id){DB.u[me].skin=id;save();applySkin();shop()}
+function buy(id){const u=DB.u[me],c=CAPES[id];if(u.coins<c.p)return toast('Pas assez de pièces');u.coins-=c.p;u.capes.push(id);u.cape=id;save();setCape();shop()}
+function eq(id){DB.u[me].cape=id;save();setCape();shop()}
+
+/* ---------- Panel admin (F4) ---------- */
+let prev=null;
+function toggleAdm(){
+ if(!isAdm())return toast('F4 : réservé aux admins');
+ const a=$('adm');
+ if(a.classList.contains('on')){a.classList.remove('on');prev&&prev.classList.add('on');if(st=='paused')st='play';upd();return}
+ prev=document.querySelector('.ov.on');prev&&prev.classList.remove('on');
+ if(st=='play')st='paused';admR();a.classList.add('on');
+}
+function admR(){
+ const t=DB.t.find(x=>x.id==DB.ct);
+ const bx=$('adm').firstElementChild;bx.style.position='relative';bx.innerHTML='<button onclick="toggleAdm()" style="position:absolute;top:8px;right:8px;width:auto;margin:0;padding:4px 10px;z-index:2">✕</button><h1>ADMIN PANEL</h1><small>F4 pour fermer</small><h2>Admins</h2>'
+ +DB.admins.map(a=>'<div class="it"><span>'+esc(a)+'</span>'+(a=='yuta'?'':'<button onclick="rmA(\''+a+'\')">✕</button>')+'</div>').join('')
+ +'<div class="row"><input id="an" placeholder="Pseudo" maxlength="16"><button class="b" onclick="addA()">Ajouter admin</button></div>'
+ +'<h2>Pièces</h2><div class="row"><input id="cn" placeholder="Pseudo"><input id="ca" type="number" placeholder="Quantité"></div><button class="b" onclick="giveC()">Donner les pièces</button>'
+ +'<h2>Tournoi</h2>'+(t?'<p>En cours : <b>'+esc(t.n)+'</b> ('+Object.keys(t.s).length+' joueurs)</p><button onclick="endT()">Terminer &amp; récompenser (500 / 300 / 100 🪙)</button>':'<small>Aucun tournoi en cours</small>')
+ +'<div class="row"><input id="tn" placeholder="Nom du tournoi" maxlength="30"><button class="b" onclick="newT()">Lancer</button></div><h2>Annonce</h2><div class="row"><input id="msg" placeholder="Message pour tous" maxlength="120" value="'+esc(DB.msg&&DB.msg.m?DB.msg.m:'')+'"><button class="b" onclick="setMsg()">Publier</button></div>'+joueursHTML()+'<button onclick="toggleAdm()">Fermer</button>';
+}
+function joueursHTML(){const ks=Object.keys(DB.u);return '<h2>Joueurs ('+ks.length+')</h2>'+ks.map(k=>{const u=DB.u[k];return '<div class="it"><span>'+esc(u.n)+(u.ban?' <small style="color:#ff6b6b">(banni)</small>':'')+'<br><small>'+u.coins+' 🪙 · '+u.best+' pts</small></span><span style="display:flex;gap:4px;flex-wrap:wrap"><button onclick="capeP(\''+k+'\')">🎭</button><button onclick="banP(\''+k+'\')">'+(u.ban?'Débannir':'Bannir')+'</button><button onclick="pwP(\''+k+'\')">🔑</button><button onclick="delP(\''+k+'\')">🗑</button></span></div>'}).join('')+'<small>🎭 donner une cape · 🔑 nouveau mot de passe · 🗑 supprimer le compte</small>'}
+function capeP(k){const c=(prompt('Cape à donner : og, red, cy ou gold')||'').trim();if(!CAPES[c])return toast('Cape inconnue');const u=DB.u[k];if(!u.capes.includes(c))u.capes.push(c);u.cape=c;save();if(k==me)setCape();admR();toast('Cape donnée à '+u.n)}
+function banP(k){if(k==me)return toast('Tu ne peux pas te bannir');const u=DB.u[k];u.ban=!u.ban;save();admR()}
+function pwP(k){const p=prompt('Nouveau mot de passe pour '+DB.u[k].n+' (4 caractères min)');if(!p||p.length<4)return toast('Mot de passe trop court');DB.u[k].pw=hash(p);save();toast('Mot de passe changé')}
+function delP(k){if(k==me)return toast('Tu ne peux pas supprimer ton compte');if(!confirm('Supprimer le compte '+DB.u[k].n+' ?'))return;delete DB.u[k];save();admR()}
+function setMsg(){const m=$('msg').value.trim().slice(0,120);DB.msg=m?{a:DB.u[me]?DB.u[me].n:'Admin',m,t:Date.now()}:null;save();clearTimeout(annT);$('ann').style.display='none';showAnn();toast(m?'Annonce publiée':'Annonce supprimée')}
+function addA(){const n=$('an').value;if(!okN(n))return toast('Pseudo invalide (2-16 lettres, chiffres, _ ou -)');const k=key(n);if(DB.admins.includes(k))return toast(n.trim()+' est déjà admin');DB.admins.push(k);save();if(k==me)upd();admR();toast('✔ '+n.trim()+' est maintenant admin'+(DB.u[k]?'':' (compte pas encore créé sur cet appareil)'))}
+function rmA(a){if(FIXED_ADMINS.includes(a))return toast('Admin fixe : retire-le dans FIXED_ADMINS du code');DB.admins=DB.admins.filter(x=>x!=a);save();if(a==me)upd();admR();toast('Admin retiré : '+a)}
+function giveC(){const k=key($('cn').value),n=parseInt($('ca').value);if(!DB.u[k]||!n)return toast('Joueur introuvable ou quantité invalide');DB.u[k].coins=Math.max(0,DB.u[k].coins+n);save();toast('✔ '+n+' pièces pour '+DB.u[k].n)}
+function newT(){const n=$('tn').value.trim().slice(0,30);if(!n)return toast('Donne un nom au tournoi');DB.ct=Date.now();DB.t.push({id:DB.ct,n,s:{}});save();admR()}
+function endT(){const t=DB.t.find(x=>x.id==DB.ct);if(!t)return;Object.entries(t.s).sort((a,b)=>b[1]-a[1]).slice(0,3).forEach(([k],i)=>{if(DB.u[k])DB.u[k].coins+=[500,300,100][i]});DB.ct=null;save();admR();toast('Tournoi terminé, récompenses envoyées')}
+
+/* ---------- Scène 3D : Tokyo de nuit ---------- */
+const R=new THREE.WebGLRenderer({antialias:true});R.setSize(innerWidth,innerHeight);R.setPixelRatio(Math.min(devicePixelRatio,2));document.body.prepend(R.domElement);
+const S=new THREE.Scene();S.background=new THREE.Color(0x0b0720);S.fog=new THREE.Fog(0x0b0720,25,95);
+const Cam=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,.1,260);Cam.position.set(0,3.2,6);Cam.lookAt(0,1,-8);
+S.add(new THREE.AmbientLight(0x9a80ff,.9));const dl=new THREE.DirectionalLight(0xff77cc,.9);dl.position.set(3,8,5);S.add(dl);
+addEventListener('resize',()=>{R.setSize(innerWidth,innerHeight);Cam.aspect=innerWidth/innerHeight;Cam.updateProjectionMatrix()});
+// route
+const rc=document.createElement('canvas');rc.width=rc.height=128;let q=rc.getContext('2d');q.fillStyle='#1b1236';q.fillRect(0,0,128,128);q.fillStyle='#00e5ff';q.fillRect(43,0,3,70);q.fillRect(82,0,3,70);
+const rt=new THREE.CanvasTexture(rc);rt.wrapS=rt.wrapT=THREE.RepeatWrapping;rt.repeat.set(1,40);
+const road=new THREE.Mesh(new THREE.PlaneGeometry(6.6,200),new THREE.MeshBasicMaterial({map:rt}));road.rotation.x=-Math.PI/2;road.position.z=-90;S.add(road);
+// soleil rose
+const sun=new THREE.Mesh(new THREE.CircleGeometry(16,40),new THREE.MeshBasicMaterial({color:0xff2e97,fog:false}));sun.position.set(0,16,-200);S.add(sun);
+// immeubles aux fenêtres allumées
+const MAPS={
+ tokyo:{bg:0x0b0720,fog:0x0b0720,sun:0xff2e97,cols:[0xff2e97,0x00e5ff,0xffd23f],road:'#1b1236',line:'#00e5ff'},
+ miami:{bg:0x2a0a3a,fog:0x3a0f4a,sun:0xff8a3d,cols:[0x00f0ff,0xff6ad5,0xffffff],road:'#1f1a40',line:'#ffd23f'},
+ dubai:{bg:0x3a2a10,fog:0x6a4a1a,sun:0xffb84d,cols:[0xffd23f,0xffffff,0x9ee8ff],road:'#2a2010',line:'#ffd23f'},
+ rio:{bg:0x06253a,fog:0x0a3450,sun:0xffd166,cols:[0x2ec4b6,0xff9f1c,0xe71d73],road:'#1a2a22',line:'#3dffb0'},
+ belgique:{bg:0x1a1a1a,fog:0x222222,sun:0xfdda24,cols:[0xfdda24,0xef3340,0xffffff],road:'#2a2a2a',line:'#fdda24'},
+ france:{bg:0x0a1a3a,fog:0x12305a,sun:0xffffff,cols:[0x002395,0xffffff,0xed2939],road:'#1c2540',line:'#ffffff'},
+ italie:{bg:0x2a1a10,fog:0x4a2e1a,sun:0xffb347,cols:[0x009246,0xffffff,0xce2b37],road:'#2a2018',line:'#ffffff'},
+ allemagne:{bg:0x1a1410,fog:0x2a2018,sun:0xffcc00,cols:[0x222222,0xdd0000,0xffce00],road:'#222222',line:'#ffce00'},
+ espagne:{bg:0x3a0f0f,fog:0x551818,sun:0xffc400,cols:[0xaa151b,0xf1bf00,0xffffff],road:'#2a1a1a',line:'#f1bf00'},
+ angleterre:{bg:0x0a0f2e,fog:0x14204a,sun:0xe4002b,cols:[0xc8102e,0x012169,0xffffff],road:'#1a1f3a',line:'#ffffff'}
+};
+function mkWM(cols){return cols.map(c=>{const k=document.createElement('canvas');k.width=32;k.height=64;const g=k.getContext('2d');g.fillStyle='#120a26';g.fillRect(0,0,32,64);for(let y=2;y<64;y+=8)for(let x=2;x<32;x+=8)if(Math.random()<.45){g.fillStyle=Math.random()<.7?'#'+c.toString(16).padStart(6,'0'):'#fff';g.fillRect(x,y,4,5)}return new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(k)})})}
+let wm=mkWM(MAPS.tokyo.cols);
+function applyMap(id){const m=MAPS[id]||MAPS.tokyo;S.background.set(m.bg);S.fog.color.set(m.fog);q.fillStyle=m.road;q.fillRect(0,0,128,128);q.fillStyle=m.line;q.fillRect(43,0,3,70);q.fillRect(82,0,3,70);rt.needsUpdate=true;sun.material.color.set(m.sun);wm=mkWM(m.cols);B.forEach(b=>{if(b.isMesh)b.material=wm[Math.floor(Math.random()*3)]})}
+const B=[];
+for(let i=0;i<20;i++)for(const s of[-1,1]){const w=3+Math.random()*3,h=8+Math.random()*16,b=new THREE.Mesh(new THREE.BoxGeometry(w,h,8),wm[Math.floor(Math.random()*3)]);b.position.set(s*(4.4+w/2),h/2,-i*10);S.add(b);B.push(b)}
+// torii
+const mT=new THREE.MeshLambertMaterial({color:0xe11d48});
+for(const z of[-40,-140]){const g=new THREE.Group();for(const s of[-1,1]){const p=new THREE.Mesh(new THREE.BoxGeometry(.45,5.4,.45),mT);p.position.set(s*3.9,2.7,0);g.add(p)}
+ const b1=new THREE.Mesh(new THREE.BoxGeometry(9.6,.55,.7),mT);b1.position.y=5.4;const b2=new THREE.Mesh(new THREE.BoxGeometry(8.4,.3,.45),mT);b2.position.y=4.5;g.add(b1,b2);g.position.z=z;S.add(g);B.push(g)}
+// joueur
+const P=new THREE.Group(),capeM=new THREE.MeshBasicMaterial({side:THREE.DoubleSide});
+const bodyM=new THREE.MeshLambertMaterial({color:0x00e5ff});const body=new THREE.Mesh(new THREE.BoxGeometry(.8,1.0,.45),bodyM);body.position.y=1.15;
+const head=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.5),new THREE.MeshLambertMaterial({color:0xffd9b0}));head.position.y=1.9;
+const capeG=new THREE.PlaneGeometry(.9,1.2,4,6);const cape=new THREE.Mesh(capeG,capeM);cape.position.set(0,1.2,.3);cape.rotation.x=.22;
+const legs=[-1,1].map(s=>{const l=new THREE.Mesh(new THREE.BoxGeometry(.28,.7,.3).translate(0,-.35,0),new THREE.MeshLambertMaterial({color:0xff2e97}));l.position.set(s*.2,.7,0);return l});
+const eyeM=new THREE.MeshBasicMaterial({color:0x111111});const eyes=[-1,1].map(s=>{const e=new THREE.Mesh(new THREE.BoxGeometry(.09,.12,.02),eyeM);e.position.set(s*.13,1.93,.26);return e});
+const hairM=new THREE.MeshLambertMaterial({color:0x2a1a0a});const hair=new THREE.Mesh(new THREE.BoxGeometry(.56,.16,.56),hairM);hair.position.y=2.2;
+const arms=[-1,1].map(s=>{const a=new THREE.Mesh(new THREE.BoxGeometry(.22,.85,.22).translate(0,-.42,0),bodyM);a.position.set(s*.55,1.6,0);return a});
+legs.forEach(l=>{const sh=new THREE.Mesh(new THREE.BoxGeometry(.3,.14,.38),new THREE.MeshLambertMaterial({color:0x222233}));sh.position.set(0,-.63,.04);l.add(sh)});
+P.add(body,head,cape,...legs,hair,...eyes,...arms);S.add(P);
+function setCape(){const c=CAPES[DB.u[me].cape],k=document.createElement('canvas');k.width=128;k.height=160;const g=k.getContext('2d'),gr=g.createLinearGradient(0,0,0,160);gr.addColorStop(0,c.c);gr.addColorStop(1,'#1a0b3a');g.fillStyle=gr;g.fillRect(0,0,128,160);g.fillStyle='#fff';g.font='bold 32px sans-serif';g.textAlign='center';g.fillText(c.txt,64,92);capeM.map=new THREE.CanvasTexture(k);capeM.needsUpdate=true}
+// obstacles et pièces
+const gC=new THREE.CylinderGeometry(.35,.35,.08,16);gC.rotateX(Math.PI/2);
+const G={car:[new THREE.BoxGeometry(1.7,1.4,3.2),new THREE.MeshLambertMaterial({color:0xffb800}),.7],low:[new THREE.BoxGeometry(1.8,.7,.5),new THREE.MeshBasicMaterial({color:0xff2e97}),.35],high:[new THREE.BoxGeometry(1.9,.5,.5),new THREE.MeshBasicMaterial({color:0x00e5ff}),1.7],c:[gC,new THREE.MeshBasicMaterial({color:0xffd23f}),1],lava:[new THREE.BoxGeometry(1.9,.06,3),new THREE.MeshBasicMaterial({color:0xff4d00}),.03]};
+const M=[];
+function mkTrain(){const g=new THREE.Group();const body=new THREE.Mesh(new THREE.BoxGeometry(1.9,3.2,6),new THREE.MeshLambertMaterial({color:0x2b2f7a}));body.position.y=1.7;g.add(body);const stripe=new THREE.Mesh(new THREE.BoxGeometry(1.94,.35,6.04),new THREE.MeshBasicMaterial({color:0x00e5ff}));stripe.position.y=2.5;g.add(stripe);const win=new THREE.Mesh(new THREE.BoxGeometry(1.96,.9,4.4),new THREE.MeshBasicMaterial({color:0xffd23f}));win.position.y=1.6;g.add(win);const roof=new THREE.Mesh(new THREE.BoxGeometry(1.7,.2,5.6),new THREE.MeshLambertMaterial({color:0x111133}));roof.position.y=3.4;g.add(roof);for(const s of[-.5,.5]){const l=new THREE.Mesh(new THREE.SphereGeometry(.2,10,8),new THREE.MeshBasicMaterial({color:0xffffff}));l.position.set(s,1.1,3.05);g.add(l)}const ws=new THREE.Mesh(new THREE.BoxGeometry(1.5,1.1,.05),new THREE.MeshBasicMaterial({color:0x0a0a20}));ws.position.set(0,1.7,3.02);g.add(ws);for(const s of[-.5,.5]){const ac=new THREE.Mesh(new THREE.BoxGeometry(.6,.3,1.2),new THREE.MeshLambertMaterial({color:0x888899}));ac.position.set(s,3.7,0);g.add(ac)}const sk=new THREE.Mesh(new THREE.BoxGeometry(1.92,.4,6.02),new THREE.MeshLambertMaterial({color:0x111122}));sk.position.y=.25;g.add(sk);return g}
+const stc=document.createElement('canvas');stc.width=stc.height=64;const sg=stc.getContext('2d');sg.fillStyle='#ffd23f';sg.fillRect(0,0,64,64);sg.fillStyle='#111';for(let i=-64;i<128;i+=32){sg.beginPath();sg.moveTo(i,0);sg.lineTo(i+16,0);sg.lineTo(i+80,64);sg.lineTo(i+64,64);sg.closePath();sg.fill()}const stripeTex=new THREE.CanvasTexture(stc);
+function mkCar(){const g=new THREE.Group();const paint=new THREE.MeshLambertMaterial({color:0xffb800});const body=new THREE.Mesh(new THREE.BoxGeometry(1.7,.7,3.2),paint);body.position.y=.5;g.add(body);const cab=new THREE.Mesh(new THREE.BoxGeometry(1.45,.55,1.7),new THREE.MeshLambertMaterial({color:0xffd23f}));cab.position.set(0,1.05,-.2);g.add(cab);const gl=new THREE.Mesh(new THREE.BoxGeometry(1.5,.4,1.72),new THREE.MeshBasicMaterial({color:0x1a1a3a}));gl.position.set(0,1.1,-.2);g.add(gl);const wm2=new THREE.MeshBasicMaterial({color:0x111111}),wg=new THREE.CylinderGeometry(.3,.3,.25,12);wg.rotateZ(Math.PI/2);for(const x of[-.85,.85])for(const z of[-1,1]){const w=new THREE.Mesh(wg,wm2);w.position.set(x,.3,z);g.add(w)}for(const x of[-.55,.55]){const t=new THREE.Mesh(new THREE.BoxGeometry(.35,.18,.05),new THREE.MeshBasicMaterial({color:0xff2e2e}));t.position.set(x,.6,-1.61);g.add(t)}return g}
+function mkBarrier(k){const g=new THREE.Group();if(k=='low'){const b=new THREE.Mesh(new THREE.BoxGeometry(1.8,.7,.5),new THREE.MeshBasicMaterial({map:stripeTex}));b.position.y=.35;g.add(b)}else{const bar=new THREE.Mesh(new THREE.BoxGeometry(1.9,.5,.5),new THREE.MeshBasicMaterial({map:stripeTex}));bar.position.y=1.7;g.add(bar);for(const s of[-.85,.85]){const p=new THREE.Mesh(new THREE.BoxGeometry(.12,1.7,.12),new THREE.MeshLambertMaterial({color:0x888899}));p.position.set(s,.85,0);g.add(p)}}return g}
+function add(k,l,z){let o;if(k=='train'){o=mkTrain();o.position.set((l-1)*2,0,z)}else if(k=='car'){o=mkCar();o.position.set((l-1)*2,0,z)}else if(k=='low'||k=='high'){o=mkBarrier(k);o.position.set((l-1)*2,0,z)}else{const g=G[k];o=new THREE.Mesh(g[0],g[1]);o.position.set((l-1)*2,g[2],z)}S.add(o);M.push({o,k})}
+function spawn(){const z=-85,ls=[0,1,2].sort(()=>Math.random()-.5),n=Math.random()<.45?2:1;
+ if(MODE=='lava'&&Math.random()<.4){for(let l=0;l<3;l++)add('lava',l,z);return}
+ for(let i=0;i<n;i++){const r=Math.random();add(r<.25?'train':r<.45?'car':r<.7?'low':'high',ls[i],z)}
+ for(let j=0;j<6;j++)add('c',ls[n],z-j*2);
+ if(MODE=='lava'&&Math.random()<.5)add('lava',ls[2],z-6)}
+function clearM(){M.forEach(e=>S.remove(e.o));M.length=0}
+
+/* ---------- Jeu ---------- */
+let strikes=0,st='auth',sp=6,dist=0,T=60,cr=0,inv=0,lane=1,px=0,py=0,vy=0,sl=0,nx=8,shk=0,tour=false,last=performance.now(),clk=0;
+const fmt=t=>{t=Math.max(0,Math.ceil(t));return Math.floor(t/60)+':'+String(t%60).padStart(2,'0')};
+let spamI;
+let MODE='normal';
+function play(){showAnn();
+ MODE=$('gm')?$('gm').value:'normal';
+ const u=DB.u[me];T=0;
+ applyMap($('mp').value);applySkin();tour=!!($('tj')&&$('tj').checked);clearM();strikes=0;dist=0;cr=0;inv=0;lane=1;px=0;py=0;vy=0;sl=0;nx=8;sp=14;
+ document.querySelectorAll('.ov').forEach(o=>o.classList.remove('on'));$('hud').style.display='flex';st='play';try{au_().resume()}catch(e){}
+}
+function end(why){clearInterval(spamI);
+ st='end';$('hud').style.display='none';const u=DB.u[me],s=Math.floor(dist)+cr*10;u.coins+=cr;let m='';
+ if(MODE=='ranked'){u.rbest=u.rbest||0;if(s>u.rbest){u.rbest=s;m='🏅 Nouveau record classé !<br>'}}else if(s>u.best){u.best=s;m='🔥 Nouveau record !<br>'}
+ const t=DB.t.find(x=>x.id==DB.ct);if(tour&&t){t.s[me]=Math.max(t.s[me]||0,s);m+='Score envoyé au tournoi.'}
+ save();$('er').innerHTML=(why?'<b style="color:#ff2e97">'+why+'</b><br>':'')+'Temps <b>'+T.toFixed(2)+' s</b><br>Score <b>'+s+'</b><br>'+Math.floor(dist)+' m · +'+cr+' 🪙<br>'+m;show('end');
+}
+function mv(d){if(st=='play')lane=Math.max(0,Math.min(2,lane+d))}
+function jump(){if(st=='play'&&py<=0){vy=14;sl=0}}
+function slide(){if(st=='play'){sl=.7;if(py>0)vy=-18}}
+addEventListener('keydown',e=>{
+ if(e.key=='F4'){e.preventDefault();toggleAdm();return}
+ if(/INPUT|TEXTAREA/.test(e.target.tagName))return;
+ const k=e.key.toLowerCase();
+ if(/^[zqsd]$/.test(k)||k.startsWith('arrow'))click();
+ if(k=='q'||k=='arrowleft')mv(-1);else if(k=='d'||k=='arrowright')mv(1);else if(k=='z'||k=='arrowup'||k==' ')jump();else if(k=='s'||k=='arrowdown')slide();
+});
+let tx=0,ty=0;
+addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)<25&&Math.abs(dy)<25)return;click();if(Math.abs(dx)>Math.abs(dy))mv(dx>0?1:-1);else dy<0?jump():slide()});
+
+function loop(now){
+ requestAnimationFrame(loop);
+ let dt=Math.min(.05,(now-last)/1000);last=now;if(st=='paused')dt=0;
+ const run=st=='play';if(!run&&st!='paused')sp=6;
+ if(run){sp=Math.min(32,14+dist*.008);T+=dt;inv=Math.max(0,inv-dt);if(strikes&&!inv)strikes=0;dist+=sp*dt;nx-=sp*dt;if(nx<=0){spawn();nx=14+Math.random()*10}}
+ clk+=dt;rt.offset.y+=sp*dt/5;
+ B.forEach(b=>{b.position.z+=sp*dt;if(b.position.z>15)b.position.z-=200});
+ // joueur
+ px+=((lane-1)*2-px)*Math.min(1,dt*14);
+ if(py>0||vy>0){vy-=38*dt;py+=vy*dt;if(py<=0){py=0;vy=0}}
+ if(sl>0)sl-=dt;
+ P.position.set(px,py,0);P.scale.y=sl>0?.5:1;P.visible=inv<=0||Math.floor(inv*12)%2==0;
+ const sw=run&&py<=0?Math.sin(clk*16)*.7:0;legs[0].rotation.x=sw;legs[1].rotation.x=-sw;arms[0].rotation.x=-sw*.8;arms[1].rotation.x=sw*.8;cape.rotation.x=.22+Math.sin(clk*10)*.08;{const pa=capeG.attributes.position;for(let i=0;i<pa.count;i++)pa.setZ(i,Math.sin(clk*7+pa.getY(i)*4)*.08);pa.needsUpdate=true}
+ // objets
+ for(let i=M.length-1;i>=0;i--){const e=M[i],o=e.o;o.position.z+=sp*dt;const z=o.position.z;
+  if(e.k=='c')o.rotation.y+=dt*4;
+  if(run&&Math.abs(o.position.x-px)<.9){
+   if(e.k=='c'){if(Math.abs(z)<.8&&py<1.4){S.remove(o);M.splice(i,1);cr++;tone(900,.1,'square',.1,0,1500);continue}}
+   else if(e.k=='lava'){if(!e.h&&Math.abs(z)<1.2&&py<.3){e.h=1;shk=.5;tone(120,.5,'sawtooth',.25,0,60);end('🔥 Tu as touché la lave !')}}
+   else if(!e.h&&Math.abs(z)<(e.k=='train'?3.4:e.k=='car'?2:.7)&&(e.k=='car'||e.k=='train'||(e.k=='low'&&py<.7)||(e.k=='high'&&sl<=0&&py<1.95))){e.h=1;strikes++;inv=1.5;shk=.35;tone(160,.25,'sawtooth',.2,0,45);if(strikes>=2)end('Tu t\'es pris 2 obstacles de suite')}
+  }
+  if(z>10){S.remove(o);M.splice(i,1)}
+ }
+ shk=Math.max(0,shk-dt);Cam.position.x=px*.5+(shk?(Math.random()-.5)*shk:0);Cam.position.y=3.2+(shk?(Math.random()-.5)*shk:0);
+ if(run){$('ht').textContent=T.toFixed(2);$('hs').textContent=Math.floor(dist)+cr*10;$('hc').textContent='🪙 '+cr}
+ R.render(S,Cam);
+}
+requestAnimationFrame(loop);
+</script></body></html>
